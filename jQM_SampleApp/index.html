@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Hello, World</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="jquery-mobile/styles/jquery.mobile-1.3.1.min.css" rel="stylesheet" />
+        <link href="styles/main.css" rel="stylesheet" />
+
+        <script src="cordova.js" type="text/javascript"></script>
+        <script src="jquery-mobile/js/jquery-1.9.1.min.js" type="text/javascript"></script>
+        <script src="jquery-mobile/js/jquery.mobile-1.3.1.min.js" type="text/javascript"></script>
+        <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=true"></script>
+
+        <script src="scripts/login.js" type="text/javascript"></script>
+        <script src="scripts/location.js" type="text/javascript"></script>
+        <script type="text/javascript">
+            $(document).ready(function () {
+                //The Object declaration  which will be used for
+                //Database
+                var PersonInfoDB = {};
+                PersonInfoDB.init = {};
+                PersonInfoDB.init.db = {};
+
+                //alert("Done");
+
+                $("#btnpersonmanager").on('click', function () {
+                    newPerson();
+                    $.mobile.changePage("#pagePersonManager");
+                });
+
+                $("#btnnew").on('click', function () {
+                    newPerson();
+                });
+
+                $("#btnadd").on('click', function () {
+                    //alert ("Add Called")
+                    createPerson();
+                });
+
+                $("#btndelete").on('click', function () {
+                    deletePerson($("#txtpersonid").val());
+                });
+
+                $("#btnback").on('click', function () {
+                    $.mobile.changePage("#pagePersonList");
+                });
+
+                //Method to Create Database
+                PersonInfoDB.init.open = function () {
+                    PersonInfoDB.init.db = window.openDatabase("Persons", "1.0", "Persons", 5000000);
+                    //The Size of DB is 5 MB
+                };
+
+
+                //Function to Create Table
+                PersonInfoDB.init.createTable = function () {
+                    //alert("In Create Table");
+                    var database = PersonInfoDB.init.db;
+                    database.transaction(function (txn) {
+                        var query = "CREATE TABLE IF NOT EXISTS PersonInfo (PersonId INTEGER PRIMARY KEY," +
+                           "PersonName TEXT, Gender TEXT," +
+                           "Address TEXT, BloodGroup  TEXT,Age INTEGER)";
+
+                     //   alert("TXN " + txn);
+                        txn.executeSql(query, []);
+                    });
+                };
+
+
+                //Method to Delete Database
+                function deleteDatabase() {
+                }
+
+                //Method to Create All TextBoxes
+                function newPerson() {
+                    $("#pagePersonManager input").val('');
+                }
+
+                //Method to Create Order
+                function createPerson() {
+                    var database = PersonInfoDB.init.db;
+                  
+                  var perid  =    $("#txtpersonid").val();
+                  var pername = $("#txtpername").val();
+                  var pergender = $("#lstgender").find(":selected").text();
+                  var peraddr = $("#txtaddr").val();
+                  var perbdgp = $("#txtbloodgrp").val();
+                  var perage = $("#txtage").val();
+
+                 database.transaction(function (tx) {
+                     tx.executeSql("Insert into PersonInfo (PersonId,PersonName,Gender,Address,BloodGroup,Age)values(?,?,?,?,?,?)", [perid, pername, pergender, peraddr, perbdgp, perage]);
+                     alert("Inserted Successfully");
+                 });
+                 $.mobile.changePage($("#pagePersonList"));
+                 loadPersons();
+                }
+
+                //Method to Delete Order
+                function deletePerson(id) {
+                    //alert("In Delete" + id);
+                    var database = PersonInfoDB.init.db;
+                    database.transaction(function (tx) {
+                        tx.executeSql("DELETE FROM PersonInfo WHERE PersonId=?", [id], function () {
+                            alert("Delete Successful");
+                        },error); 
+                    });
+                    $.mobile.changePage($("#pagePersonList"));
+                    loadPersons();
+                }
+
+                function error()
+                {
+                    alert("Error");
+                }
+
+                //Method to Load Order
+                function loadPersons() {
+                     personTable = "";
+                    var database = PersonInfoDB.init.db;
+                    personTable = "<table id='tblpersons' border='1'><tr><th>PersonId</th><th>PersonName</th><th>Gender</th><th>Address</th><th>BloodGroup</th><th>Age</th></tr>";
+                    database.transaction(function (tx) {
+                        tx.executeSql("SELECT * from PersonInfo", [], function (tx, result) {
+                            //alert("No. of Records " + result.rows.length);
+
+                            for (var i = 0; i < result.rows.length; i++) {
+                                 Perid = result.rows.item(i).PersonId;
+                                 Pername = result.rows.item(i).PersonName;
+                                 Pergender = result.rows.item(i).Gender;
+                                 Peraddr = result.rows.item(i).Address;
+                                 Perbloodgrp = result.rows.item(i).BloodGroup;
+                                 Perage = result.rows.item(i).Age;
+
+                                personTable += "<tr><td class='cid'>" + Perid + "</td><td>" + Pername + "</td><td>" +
+                                 Pergender + "</td><td>" + Peraddr  + "</td><td>" + Perbloodgrp +
+                                 "</td><td>" + Perage+ "</td></tr>";
+
+                                ////Display Data in Table
+                                //$("#tblpersons").append(
+                                //    "<tr><td class='cid'>" + perid + "</td><td>" + pername + "</td><td>" + pergender +
+                                //    "</td><td>" + peraddr + "</td><td>" + perbloodgrp +
+                                //    "</td><td>" + perage + "</td></tr>"
+                                //    );
+                            }
+                            personTable+= "</table>";
+                            
+                            $("#dvdata").html(personTable);
+                        });
+                    })
+                };
+
+                //Method to Load Order By Id
+                function loadPerson(id) {
+                      alert("In Load " + id);
+
+                    var database = PersonInfoDB.init.db;
+                    database.transaction(function (tx) {
+                        tx.executeSql("SELECT * from PersonInfo where PersonId=?", [id], function (tx, result) {
+                          //  alert("Result Lenght " + result.rows.length);
+                            if (result.rows.length > 0) {
+                                $("#txtpersonid").val(result.rows.item(0).PersonId);
+                                $("#txtpername").val(result.rows.item(0).PersonName);
+                                $("#txtaddr").val(result.rows.item(0).Address);
+                                $("#txtbloodgrp").val(result.rows.item(0).BloodGroup);
+                                $("#txtage").val(result.rows.item(0).Age);
+                            }
+                                
+                    //        for (var i = 0; i < result.rows.length; i++) {
+                                 //perId = result.rows.item(i).PersonId;
+                                 //perName = result.rows.item(i).PersonName;
+                                 //perGender = result.rows.item(i).Gender;
+                                 //perAddr = result.rows.item(i).Address;
+                                 //perBloodgrp = result.rows.item(i).BloodGroup;
+                                 //perAge = result.rows.item(i).Age;
+                            //      }
+                            
+                        })
+                    });
+
+                    
+                };
+
+
+                //Method to Get the PersonId on clicking on the Table
+
+                $("#dvdata").on('click', $("#tblpersons"), function () {
+                     var id = 0;
+                    $("#tblpersons tr").filter(":not(:has(table,th))").each(function () {
+                        $(this).on('click', function () {
+                            id = $(this).closest('tr').children('td.cid').text();
+                            if (id > 0) {
+                                loadPerson(id);
+                                alert("Selected Id = " + id);
+                                $.mobile.changePage("#pagePersonManager");
+                                return false;
+                            }
+                        });
+                    });
+                });
+
+                ///Initialize the Database and Table
+                function InitializeDBandTable() {
+                     alert("In Init");
+                    if (typeof (openDatabase) !== 'undefined') {
+
+                        PersonInfoDB.init.open();
+                        PersonInfoDB.init.createTable();
+
+                        alert("Db and Table Created");
+                    }
+                    else {
+                        alert("DB Not Supported");
+                    }
+                }
+                InitializeDBandTable();
+            });
+        </script>
+    </head>
+    <body>
+
+        <div id="pagePersonList" data-role="page" >
+            <div  data-role="header">
+                <h2>
+                    List of Persons
+                </h2>
+            </div>
+            <div data-role="content">
+                <div id="dvdata"></div>
+              <!--<table id="tblpersons" border="1">
+                <tr>
+                         <th>Person Id</th>
+                        <th>Person Name</th>
+                        <th>Gender</th>
+                        <th>Address</th>
+                        <th>Blood Group</th>
+                        <th>Age</th>
+                    </tr>
+            </table>-->
+                
+            </div>
+            <div data-role="footer">
+                <input type="button" value="To Manage Persons Click here"   id="btnpersonmanager"/>
+                <div>
+                    <span>Tap on the Person Id to Change (Update or Delete)</span>
+                </div>
+            </div>
+        </div>
+      <div data-role="page" id="pagePersonManager" data-add-back-btn="true">
+          <table>
+              <tr>
+                  <td>
+                      <span>Person Id:</span>
+                  </td>
+                   <td>
+                      <span>
+                          <input type="text" id="txtpersonid" />
+                      </span>
+                  </td>
+              </tr>
+                   <tr>
+                  <td>
+                      <span>Name:</span>
+                  </td>
+                   <td>
+                      <span>
+                          <input type="text" id="txtpername" />
+                      </span>
+                  </td>
+              </tr>
+              <tr>
+                  <td>
+                      <span>Gender:</span>
+                  </td>
+                   <td>
+                      <span>
+                         <select data-role="listview" id="lstgender">
+                              <option value="Male">Male</option>
+                                <option value="Feale">Female</option>
+                         </select>
+                      </span>
+                  </td>
+              </tr>
+                   <tr>
+                  <td>
+                      <span>Address:</span>
+                  </td>
+                   <td>
+                      <span>
+                        <input type="text" id="txtaddr"/>
+                      </span>
+                  </td>
+              </tr>
+                
+              <tr>
+                  <td>
+                      <span>Blood Group:</span>
+                  </td>
+                   <td>
+                      <span>
+                          <input type="text" id="txtbloodgrp" />
+                      </span>
+                  </td>
+              </tr>
+              <tr>
+                  <td>
+                      <span>Age:</span>
+                  </td>
+                   <td>
+                      <span>
+                          <input type="text" id="txtage" />
+                      </span>
+                  </td>
+              </tr>
+              <tr>
+                  <td>
+                      <input type="button" value="New" id="btnnew"  data-icon="home" data-iconpos="notext"/>
+                  </td>
+                    <td>
+                      <input type="button" value="Add" id="btnadd" data-icon="add" data-iconpos="notext"/>
+                  </td>
+                    <td>
+                      <input type="button" value="Delete" id="btndelete" data-icon="delete" data-iconpos="notext"/>
+                  </td>
+              </tr>
+              <tr>
+                  <td>
+                   <input type="button" value="Back to Details" id="btnback"  data-icon="home"/>
+                </td>
+              </tr>
+          </table>
+      </div>
+    </body> 
+</html>
